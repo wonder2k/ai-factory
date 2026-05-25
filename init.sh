@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🚀 Hermes AI Factory - DeepSeek 代理完全体种子脚手架 (开箱即用)
+# 🚀 Hermes AI Factory - Free-Claude-Code 纯正基因种子脚手架 (开箱即用)
 # ==============================================================================
 
 set -e
 
-# 确保所有文件精准生成在当前运行脚本的根目录下，绝对不会多套一层文件夹
+# 确保所有文件精准生成在当前运行脚本的根目录下，绝不多套一层文件夹
 BASE_DIR=$(pwd)
 
 echo "===================================================="
-echo "🌱 开始释放包含 free-claude-code 代理的全套配置文件..."
+echo "🌱 开始释放完全适配 free-claude-code CLI 架构的配置文件..."
 echo "📂 当前工作区绝对路径: $BASE_DIR"
 echo "===================================================="
 
@@ -38,11 +38,11 @@ cat << 'EOF' > "$BASE_DIR/.devcontainer/devcontainer.json"
 }
 EOF
 
-# 3. 写入 docker/Dockerfile.claude (工兵容器：指向本地代理)
+# 3. 写入 docker/Dockerfile.claude (★重点：在这里注入 fcc 一键安装)
 cat << 'EOF' > "$BASE_DIR/docker/Dockerfile.claude"
 FROM node:22-bookworm
 
-# 安装全套底层构建链、标准 C 库环境以及原生 PostgreSQL 客户端
+# 安装全套底层构建链、标准 C 库环境、原生 PostgreSQL 客户端以及 nano/curl
 RUN apt-get update && apt-get install -y \
     git \
     bash \
@@ -51,27 +51,40 @@ RUN apt-get update && apt-get install -y \
     python3 \
     postgresql-client \
     curl \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
-# 全局安装官方核心工兵组件
+# A. 全局安装官方核心工兵组件
 RUN npm install -g @anthropic-ai/claude-code
 
-# 固化本地 Git 身份，防止 Agent 提交代码时弹窗中断
+# B. 🌟 按照你的步骤 1：通过官方脚本一键安装 free-claude-code 体系
+RUN curl -fsSL "https://github.com/Alishahryar1/free-claude-code/blob/main/scripts/install.sh?raw=1" | sh
+
+# 固化本地 Git 身份
 RUN git config --global user.name "Hermes AI Coder" && \
     git config --global user.email "hermes-agent@internal.ai"
 
-# 动态点火：运行时强行写入本地代理的配置文件，选择用 Console 方式（API 模式）欺骗 CLI
+# C. 🌟 按照你的步骤 2、3、4：在运行时进行自动初始化、注入配置并守护运行
+# 这样容器一拉起来，fcc-server 就已经在后台跑着了，而且配置全部自动对齐
 CMD ["sh", "-c", "\
-mkdir -p ~/.claude && \
-echo '{\"mcpServers\":{}}' > ~/.claude/settings.json && \
-echo '🚀 AI Sandbox full-pack scaffolding initialization completed!' && \
+echo '⚙️  正在执行 fcc-init 初始化...' && \
+fcc-init || true && \
+mkdir -p ~/.fcc && \
+echo '📝 正在自动写入 ~/.fcc/.env 配置文件...' && \
+echo \"DEEPSEEK_API_KEY=\\\"${DEEPSEEK_API_KEY}\\\"\" > ~/.fcc/.env && \
+echo \"MODEL=\\\"deepseek/deepseek-v4-flash\\\"\" >> ~/.fcc/.env && \
+echo \"ANTHROPIC_AUTH_TOKEN=\\\"freecc\\\"\" >> ~/.fcc/.env && \
+echo '🚀 正在后台拉起 fcc-server 代理...' && \
+fcc-server & \
+sleep 2 && \
+echo '🎉 Free-Claude-Code 环境就绪，工兵常驻就位！' && \
 tail -f /dev/null \
 "]
 EOF
 
-# 4. 写入 docker-compose.yml (★重点：加入 claude-proxy 服务)
+# 4. 写入 docker-compose.yml (回归纯净的多容器网段，剥离无用的旧 proxy 服务)
 cat << 'EOF' > "$BASE_DIR/docker-compose.yml"
 version: '3.8'
 
@@ -111,21 +124,6 @@ services:
       - MAX_CONCURRENT_SESSIONS=10
     restart: always
 
-  # 🌟 新增：free-claude-code 独立中转服务
-  claude-proxy:
-    image: node:22-alpine
-    container_name: claude-proxy
-    networks:
-      - hermes-net
-    ports:
-      - "8081:8081"
-    environment:
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      - PORT=8081
-    # 容器启动时自动拉取 free-claude-code 并作为独立后端常驻运行
-    command: sh -c "git clone https://github.com/madawei2699/free-claude-code.git /proxy && cd /proxy && npm install && node server.js"
-    restart: always
-
   claude-dev-env:
     build:
       context: .
@@ -136,10 +134,7 @@ services:
     volumes:
       - .:/workspace
     environment:
-      # 🌟 核心：强行截断官方请求，把 Base URL 重定向到容器内部的自建代理上
-      - ANTHROPIC_BASE_URL=http://claude-proxy:8081/v1
-      # 这里的 Key 会通过代理传递给 DeepSeek 认证
-      - ANTHROPIC_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
     restart: always
 
   hermes-agent-center:
@@ -157,7 +152,7 @@ services:
     restart: always
 EOF
 
-# 5. 写入 hermes-server.js
+# 5. 写入 hermes-server.js (★重点：总控大脑的执行命令无缝进化为 fcc-claude)
 cat << 'EOF' > "$BASE_DIR/hermes-server.js"
 const { exec } = require('child_process');
 const https = require('https');
@@ -199,7 +194,8 @@ function pollUpdates() {
                             sendMessage(chatId, `🚀 Hermes 收到指令，正在唤醒 Claude 工兵执行，请稍候...`);
 
                             const safePrompt = userPrompt.replace(/"/g, '\\"');
-                            exec(`docker exec -i claude-dev-env claude "${safePrompt} --yes"`, (err, stdout, stderr) => {
+                            // 🌟 核心进化：这里不再调用纯 claude，而是直接轰入搭载了 FCC 代理的包裹命令 fcc-claude！
+                            exec(`docker exec -i claude-dev-env fcc-claude "${safePrompt} --yes"`, (err, stdout, stderr) => {
                                 const output = stdout || stderr || "执行完毕，无控制台输出。";
                                 sendMessage(chatId, `✅ **Claude 执行战果汇报：**\n\n${output}`);
                             });
@@ -227,15 +223,15 @@ cat << 'EOF' > "$BASE_DIR/CLAUDE.md"
 - Node Version: 22 (Debian Bookworm)
 - Database: PostgreSQL 16 (Host: postgres-db, Port: 5432, User: postgres, DB: app_prod)
 - Headless Browser: Browserless Chrome (Host: chrome-headless, Port: 3000)
-- LLM Gateway: Local free-claude-code proxy forwarding to DeepSeek
+- Proxy CLI Wrapper: free-claude-code (fcc-server, fcc-claude) forwarding to DeepSeek Flash
 
 ## 🎯 Development Rules
+- ALWAYS use `fcc-claude` for running development agent queries.
 - ALWAYS check database connectivity using local native `psql` client before writing migration files.
-- NEVER use experimental or unverified external MCP npm packages. Trust native terminal tools.
 - Keep commands non-interactive; assume `--yes` for all automated scripts.
 EOF
 
 echo "===================================================="
-echo "🎉 包含 free-claude-code 代理的满配完全体脚手架资产已成功在当前目录下释放！"
+echo "🎉 适配 free-claude-code CLI 工具链的满配完全体脚手架已在当前目录下释放！"
 echo "👉 接下来请直接在 Codespaces 中运行: docker compose up -d --build"
 echo "===================================================="
