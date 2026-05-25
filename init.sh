@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🚀 Hermes AI Factory - 满配版种子脚手架生成器 (开箱即用完全体)
+# 🚀 Hermes AI Factory - DeepSeek 代理完全体种子脚手架 (开箱即用)
 # ==============================================================================
 
 set -e
@@ -10,17 +10,16 @@ set -e
 BASE_DIR=$(pwd)
 
 echo "===================================================="
-echo "🌱 开始从零释放 AI Factory 满配全栈配置文件..."
+echo "🌱 开始释放包含 free-claude-code 代理的全套配置文件..."
 echo "📂 当前工作区绝对路径: $BASE_DIR"
 echo "===================================================="
 
 # 1. 建立标准的完全体目录结构
 mkdir -p "$BASE_DIR/docker"
 mkdir -p "$BASE_DIR/.devcontainer"
-mkdir -p "$BASE_DIR/llm-integrations"  # 预留给未来多模型联动的模块目录
+mkdir -p "$BASE_DIR/llm-integrations"
 
 # 2. 写入 .devcontainer/devcontainer.json
-echo "📝 正在生成 .devcontainer/devcontainer.json (Codespaces 自动点火挂载)..."
 cat << 'EOF' > "$BASE_DIR/.devcontainer/devcontainer.json"
 {
     "name": "Hermes AI Factory Workspace",
@@ -39,8 +38,7 @@ cat << 'EOF' > "$BASE_DIR/.devcontainer/devcontainer.json"
 }
 EOF
 
-# 3. 写入 docker/Dockerfile.claude (在这里完成 10 大官方插件的静默安装)
-echo "📝 正在生成 docker/Dockerfile.claude (集成 10 大官方插件)..."
+# 3. 写入 docker/Dockerfile.claude (工兵容器：指向本地代理)
 cat << 'EOF' > "$BASE_DIR/docker/Dockerfile.claude"
 FROM node:22-bookworm
 
@@ -60,15 +58,11 @@ WORKDIR /workspace
 # 全局安装官方核心工兵组件
 RUN npm install -g @anthropic-ai/claude-code
 
-# 🌟 核心：在镜像编译阶段，直接预装你查询到的 10 个官方核心插件/技能包
-# 使用假 key 诱导 CLI 完成预装与本地文件释放，防止运行时弹窗
-RUN echo "y" | ANTHROPIC_API_KEY=sk-dummy-key-for-build claude "Please pre-install these official plugins: claude-code-setup, claude-md-management, code-review, code-simplifier, context7, feature-dev, frontend-design, playwright, superpowers, security-guidance." --yes || true
-
 # 固化本地 Git 身份，防止 Agent 提交代码时弹窗中断
 RUN git config --global user.name "Hermes AI Coder" && \
     git config --global user.email "hermes-agent@internal.ai"
 
-# 动态点火：运行时家目录的配置交由容器启动时安全写入
+# 动态点火：运行时强行写入本地代理的配置文件，选择用 Console 方式（API 模式）欺骗 CLI
 CMD ["sh", "-c", "\
 mkdir -p ~/.claude && \
 echo '{\"mcpServers\":{}}' > ~/.claude/settings.json && \
@@ -77,8 +71,7 @@ tail -f /dev/null \
 "]
 EOF
 
-# 4. 写入 docker-compose.yml
-echo "📝 正在生成 docker-compose.yml ..."
+# 4. 写入 docker-compose.yml (★重点：加入 claude-proxy 服务)
 cat << 'EOF' > "$BASE_DIR/docker-compose.yml"
 version: '3.8'
 
@@ -118,6 +111,21 @@ services:
       - MAX_CONCURRENT_SESSIONS=10
     restart: always
 
+  # 🌟 新增：free-claude-code 独立中转服务
+  claude-proxy:
+    image: node:22-alpine
+    container_name: claude-proxy
+    networks:
+      - hermes-net
+    ports:
+      - "8081:8081"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - PORT=8081
+    # 容器启动时自动拉取 free-claude-code 并作为独立后端常驻运行
+    command: sh -c "git clone https://github.com/madawei2699/free-claude-code.git /proxy && cd /proxy && npm install && node server.js"
+    restart: always
+
   claude-dev-env:
     build:
       context: .
@@ -127,6 +135,11 @@ services:
       - hermes-net
     volumes:
       - .:/workspace
+    environment:
+      # 🌟 核心：强行截断官方请求，把 Base URL 重定向到容器内部的自建代理上
+      - ANTHROPIC_BASE_URL=http://claude-proxy:8081/v1
+      # 这里的 Key 会通过代理传递给 DeepSeek 认证
+      - ANTHROPIC_API_KEY=${DEEPSEEK_API_KEY}
     restart: always
 
   hermes-agent-center:
@@ -139,19 +152,19 @@ services:
     working_dir: /workspace
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
     command: tail -f /dev/null
     restart: always
 EOF
 
 # 5. 写入 hermes-server.js
-echo "📝 正在生成 hermes-server.js ..."
 cat << 'EOF' > "$BASE_DIR/hermes-server.js"
 const { exec } = require('child_process');
 const https = require('https');
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!TOKEN) {
-    console.error("❌ Error: TELEGRAM_BOT_TOKEN is missing in environment variables!");
+    console.error("❌ Error: TELEGRAM_BOT_TOKEN is missing!");
     process.exit(1);
 }
 
@@ -207,7 +220,6 @@ pollUpdates();
 EOF
 
 # 6. 写入 CLAUDE.md
-echo "📝 正在生成 CLAUDE.md ..."
 cat << 'EOF' > "$BASE_DIR/CLAUDE.md"
 # 🛠️ Hermes AI Factory Project Guide
 
@@ -215,6 +227,7 @@ cat << 'EOF' > "$BASE_DIR/CLAUDE.md"
 - Node Version: 22 (Debian Bookworm)
 - Database: PostgreSQL 16 (Host: postgres-db, Port: 5432, User: postgres, DB: app_prod)
 - Headless Browser: Browserless Chrome (Host: chrome-headless, Port: 3000)
+- LLM Gateway: Local free-claude-code proxy forwarding to DeepSeek
 
 ## 🎯 Development Rules
 - ALWAYS check database connectivity using local native `psql` client before writing migration files.
@@ -223,7 +236,6 @@ cat << 'EOF' > "$BASE_DIR/CLAUDE.md"
 EOF
 
 echo "===================================================="
-echo "🎉 恭喜！满配完全体脚手架资产已成功在当前目录下释放！"
-echo "📂 生成的目录包括: .devcontainer/, docker/, llm-integrations/"
-echo "👉 现在请直接在 Codespaces 中运行: docker compose up -d --build"
+echo "🎉 包含 free-claude-code 代理的满配完全体脚手架资产已成功在当前目录下释放！"
+echo "👉 接下来请直接在 Codespaces 中运行: docker compose up -d --build"
 echo "===================================================="
