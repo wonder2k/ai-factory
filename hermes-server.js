@@ -21,6 +21,7 @@ function sendMessage(chatId, text) {
 }
 
 function pollUpdates() {
+    // 🌟 核心优化：每次拉取显式带上 offset，强行清空 Telegram 服务器上的历史积压
     https.get(`https://api.telegram.org/bot${TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`, (res) => {
         let body = '';
         res.on('data', chunk => body += chunk);
@@ -29,19 +30,25 @@ function pollUpdates() {
                 const data = JSON.parse(body);
                 if (data.ok && data.result.length > 0) {
                     for (const update of data.result) {
+                        // 物理级更新 offset 标记，防止消息被重复或漏拉
                         lastUpdateId = update.update_id;
+                        
                         if (update.message && update.message.text) {
-                            const chatId = update.message.chat_id;
+                            const chatId = update.message.chat.id || update.message.chat_id || update.message.from.id;
                             const userPrompt = update.message.text;
 
                             console.log(`📩 收到电报指令: ${userPrompt}`);
                             sendMessage(chatId, `🚀 Hermes 收到指令，正在唤醒 Claude 工兵执行，请稍候...`);
 
                             const safePrompt = userPrompt.replace(/"/g, '\\"');
-                            exec(`docker exec -i claude-dev-env fcc-claude "${safePrompt} --yes"`, (err, stdout, stderr) => {
-                                const output = stdout || stderr || "执行完毕，无控制台输出。";
-                                sendMessage(chatId, `✅ **Claude 执行战果汇报：**\n\n${output}`);
-                            });
+                            
+                            // 🌟 核心并发优化：让 fcc-claude 执行彻底异步，不阻塞下一条 getUpdates 消息的拉取
+                            setTimeout(() => {
+                                exec(`docker exec -i claude-dev-env fcc-claude "${safePrompt} --yes"`, (err, stdout, stderr) => {
+                                    const output = stdout || stderr || "执行完毕，无控制台输出。";
+                                    sendMessage(chatId, `✅ **Claude 执行战果汇报：**\n\n${output}`);
+                                });
+                            }, 50);
                         }
                     }
                 }
@@ -54,5 +61,5 @@ function pollUpdates() {
     });
 }
 
-console.log("🚀 Hermes 总控大脑已点火，正在监听 Telegram 消息...");
+console.log("🚀 Hermes 总控大脑完全体已点火，正在丝滑监听 Telegram 消息...");
 pollUpdates();
