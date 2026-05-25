@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🚀 Hermes AI Factory - Free-Claude-Code 纯正基因种子脚手架 (开箱即用)
+# 🚀 Hermes AI Factory - Free-Claude-Code + Karpathy 四大原则完全体脚手架
 # ==============================================================================
 
 set -e
@@ -10,7 +10,7 @@ set -e
 BASE_DIR=$(pwd)
 
 echo "===================================================="
-echo "🌱 开始释放完全适配 free-claude-code CLI 架构的配置文件..."
+echo "🌱 开始释放深度融合 Karpathy 四大原则的完全体配置文件..."
 echo "📂 当前工作区绝对路径: $BASE_DIR"
 echo "===================================================="
 
@@ -38,7 +38,7 @@ cat << 'EOF' > "$BASE_DIR/.devcontainer/devcontainer.json"
 }
 EOF
 
-# 3. 写入 docker/Dockerfile.claude (★重点：在这里注入 fcc 一键安装)
+# 3. 写入 docker/Dockerfile.claude
 cat << 'EOF' > "$BASE_DIR/docker/Dockerfile.claude"
 FROM node:22-bookworm
 
@@ -59,15 +59,14 @@ WORKDIR /workspace
 # A. 全局安装官方核心工兵组件
 RUN npm install -g @anthropic-ai/claude-code
 
-# B. 🌟 按照你的步骤 1：通过官方脚本一键安装 free-claude-code 体系
+# B. 通过官方脚本一键安装 free-claude-code 体系
 RUN curl -fsSL "https://github.com/Alishahryar1/free-claude-code/blob/main/scripts/install.sh?raw=1" | sh
 
 # 固化本地 Git 身份
 RUN git config --global user.name "Hermes AI Coder" && \
     git config --global user.email "hermes-agent@internal.ai"
 
-# C. 🌟 按照你的步骤 2、3、4：在运行时进行自动初始化、注入配置并守护运行
-# 这样容器一拉起来，fcc-server 就已经在后台跑着了，而且配置全部自动对齐
+# C. 运行时自动初始化、注入配置并守护运行
 CMD ["sh", "-c", "\
 echo '⚙️  正在执行 fcc-init 初始化...' && \
 fcc-init || true && \
@@ -84,7 +83,7 @@ tail -f /dev/null \
 "]
 EOF
 
-# 4. 写入 docker-compose.yml (回归纯净的多容器网段，剥离无用的旧 proxy 服务)
+# 4. 写入 docker-compose.yml
 cat << 'EOF' > "$BASE_DIR/docker-compose.yml"
 version: '3.8'
 
@@ -152,7 +151,7 @@ services:
     restart: always
 EOF
 
-# 5. 写入 hermes-server.js (★重点：总控大脑的执行命令无缝进化为 fcc-claude)
+# 5. 写入 hermes-server.js
 cat << 'EOF' > "$BASE_DIR/hermes-server.js"
 const { exec } = require('child_process');
 const https = require('https');
@@ -194,7 +193,6 @@ function pollUpdates() {
                             sendMessage(chatId, `🚀 Hermes 收到指令，正在唤醒 Claude 工兵执行，请稍候...`);
 
                             const safePrompt = userPrompt.replace(/"/g, '\\"');
-                            // 🌟 核心进化：这里不再调用纯 claude，而是直接轰入搭载了 FCC 代理的包裹命令 fcc-claude！
                             exec(`docker exec -i claude-dev-env fcc-claude "${safePrompt} --yes"`, (err, stdout, stderr) => {
                                 const output = stdout || stderr || "执行完毕，无控制台输出。";
                                 sendMessage(chatId, `✅ **Claude 执行战果汇报：**\n\n${output}`);
@@ -215,9 +213,9 @@ console.log("🚀 Hermes 总控大脑已点火，正在监听 Telegram 消息...
 pollUpdates();
 EOF
 
-# 6. 写入 CLAUDE.md
+# 6. 写入 CLAUDE.md (★ 重点：深度融合 Karpathy 四大原则行为约束)
 cat << 'EOF' > "$BASE_DIR/CLAUDE.md"
-# 🛠️ Hermes AI Factory Project Guide
+# 🛠️ Hermes AI Factory Project Guide & Rules
 
 ## ⚙️ Environment Constraints
 - Node Version: 22 (Debian Bookworm)
@@ -225,13 +223,13 @@ cat << 'EOF' > "$BASE_DIR/CLAUDE.md"
 - Headless Browser: Browserless Chrome (Host: chrome-headless, Port: 3000)
 - Proxy CLI Wrapper: free-claude-code (fcc-server, fcc-claude) forwarding to DeepSeek Flash
 
-## 🎯 Development Rules
-- ALWAYS use `fcc-claude` for running development agent queries.
-- ALWAYS check database connectivity using local native `psql` client before writing migration files.
-- Keep commands non-interactive; assume `--yes` for all automated scripts.
-EOF
+## 🧠 Karpathy AI Programming Principles (Strictly Enforced)
 
-echo "===================================================="
-echo "🎉 适配 free-claude-code CLI 工具链的满配完全体脚手架已在当前目录下释放！"
-echo "👉 接下来请直接在 Codespaces 中运行: docker compose up -d --build"
-echo "===================================================="
+### 1. 先思考后编码 (Think Before Coding)
+- **不要假设**：有任何不确定的业务逻辑或系统设计，先停下来提问澄清，禁止盲目盲盒式编写。
+- **呈现权衡**：在修改前，如果存在多种技术选型，必须在终端/日志中显式陈述每种方法的利弊和隐私影响。
+- **遇到困惑立即停止**：如果发现上下文或已有代码逻辑不明，停止执行，并报告不清楚的地方。
+
+### 2. 简洁优先 (Simplicity First)
+- **只解决当下问题**：严禁添加任何“未来可能用到”的未请求功能、配置项、或可扩展性抽象。
+- **杜绝过度工程**：如果一段逻辑能用最简单的 20 行原生代码讲清楚，严禁引入复杂的第方三类库或大型设计模式。如果代码写得复杂了，立刻
