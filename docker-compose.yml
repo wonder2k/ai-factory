@@ -1,0 +1,61 @@
+version: '3.8'
+
+networks:
+  hermes-net:
+    name: workspace_hermes-net
+    driver: bridge
+
+volumes:
+  workspace_postgres_data:
+    name: workspace_postgres_data
+
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: postgres-db
+    networks:
+      - hermes-net
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=SecurePass_2026
+      - POSTGRES_DB=app_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - workspace_postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  chrome-headless:
+    image: browserless/chrome:1.60-chrome-stable
+    container_name: chrome-headless
+    networks:
+      - hermes-net
+    ports:
+      - "3000:3000"
+    environment:
+      - MAX_CONCURRENT_SESSIONS=10
+    restart: always
+
+  claude-dev-env:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.claude
+    container_name: claude-dev-env
+    networks:
+      - hermes-net
+    volumes:
+      - .:/workspace
+    restart: always
+
+  hermes-agent-center:
+    image: node:22-bookworm
+    container_name: hermes-agent-center
+    networks:
+      - hermes-net
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    command: tail -f /dev/null
+    restart: always
