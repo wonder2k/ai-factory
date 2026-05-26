@@ -35,15 +35,17 @@ function pollUpdates() {
                             const userPrompt = update.message.text;
 
                             console.log(`📩 收到电报指令: ${userPrompt}`);
-                            sendMessage(chatId, `🚀 Hermes 收到指令，正在唤醒 Claude 工兵执行，请稍候...`);
+                            sendMessage(chatId, `🚀 Hermes 收到指令，正在唤醒 10 大官方外挂满配工兵执行，请稍候...`);
 
                             const safePrompt = userPrompt.replace(/"/g, '\\"');
                             
-                            // 🌟 彻底异步执行 fcc-claude，原地原汁原味调用，绝不卡死长轮询
+                            // 🌟 究极硬核对齐：在执行 fcc-claude 时，追加 --plugin 参数，把本地这 10 个核心外挂硬生生灌进每一次会话中！
+                            const pluginsFlag = "--plugin claude-code-setup,claude-md-management,code-review,code-simplifier,context7,feature-dev,frontend-design,playwright,superpowers,security-guidance";
+                            
                             setTimeout(() => {
-                                exec(`fcc-claude "${safePrompt} --yes"`, (err, stdout, stderr) => {
+                                exec(`fcc-claude ${pluginsFlag} "${safePrompt} --yes"`, (err, stdout, stderr) => {
                                     const output = stdout || stderr || "执行完毕，无控制台输出。";
-                                    sendMessage(chatId, `✅ **Claude 执行战果汇报：**\n\n${output}`);
+                                    sendMessage(chatId, `✅ **Claude + 10大外挂满配战果汇报：**\n\n${output}`);
                                 });
                             }, 50);
                         }
@@ -58,5 +60,5 @@ function pollUpdates() {
     });
 }
 
-console.log("🚀 Hermes 总控大脑完全体已在工箱内部就地起飞，正在丝滑监听 Telegram 消息...");
+console.log("🚀 Hermes 总控大脑【外挂强制对齐版】已点火，正在丝滑监听 Telegram 消息...");
 pollUpdates();
