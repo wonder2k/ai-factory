@@ -1,8 +1,6 @@
 {
     "name": "Hermes AI Factory Workspace",
-    "dockerComposeFile": "../docker-compose.yml",
-    "service": "claude-dev-env",
-    "workspaceFolder": "/workspace",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -11,5 +9,5 @@
             ]
         }
     },
-    "remoteUser": "root"
+    "remoteUser": "vscode"
 }
