@@ -26,7 +26,7 @@
 
 
 * **合体大脑 (`claude-dev-env`)**：既是接收 Telegram 信号的总控台，又是执行底层 `fcc-claude` 编译的特种兵沙箱。由于在同一容器内，彻底根治了 `docker: not found` 隐患。
-* **白嫖中转层 (`free-claude-code`)**：在容器内启动本地 `fcc-server` 拦截所有 Anthropic 官方的计费请求，并以完全符合合规和性能约束的方式无缝转换为 DeepSeek v4 Flash 极速推理算力。
+* **白嫖中转层 (`free-claude-code`)**：在容器内启动本地 `fcc-server` 拦截所有 Anthropic 官方的计费请求，并以完全符合合规与性能约束的方式无缝转换为 DeepSeek v4 Flash 极速推理算力。
 * **外部拓扑环境**：容器内桥接了 `postgres-db`（数据读写）与 `chrome-headless`（利用 Playwright 进行网页爬取、截图和 E2E 自动化测试）。
 
 ---
@@ -62,7 +62,7 @@ Bash
 fcc-init
 
 # 2. 强行将宿主机的密钥精准灌入它的本地环境
-echo "DEEPSEEK_API_KEY=\"${DEEPSEEK_API_KEY}\"" > ~/.fcc/.env
+echo "DEEPSEEK_API_KEY=\"\${DEEPSEEK_API_KEY}\"" > ~/.fcc/.env
 echo "MODEL=\"deepseek/deepseek-v4-flash\"" >> ~/.fcc/.env
 echo "ANTHROPIC_AUTH_TOKEN=\"freecc\"" >> ~/.fcc/.env
 步骤 3：在前台启动 fcc-claude 并一键收割 10 大核心外挂
@@ -100,8 +100,3 @@ exit
 精准修改 (Precision Modifying)：只触碰为了完成目标所必需的最小文件子集，严禁顺手去美化或改进相邻的、没坏的代码。
 
 目标驱动与验证 (Objective-Driven)：每一行改动必须能完全追溯到用户的 Telegram 原始输入。
-
-
----
-
-这一套“**全栈 Docker 化 + 30秒人工对齐插件**”的方案是极客圈和工业界无数次踩坑后的最终归宿。去按这个新流程冷启动跑一次吧，享受属于你的满配、
