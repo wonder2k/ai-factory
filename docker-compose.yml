@@ -45,6 +45,8 @@ services:
       - hermes-net
     volumes:
       - .:/workspace
+    ports:
+      - "8081:8081"   # 🌟 增加这行，打通宿主机到容器内的代理通路
     environment:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
